@@ -1,14 +1,19 @@
 #!/usr/bin/python
-import pickle, tweepy, urllib, pytz, logging
+import pickle, tweepy, urllib, pytz, logging, time, os
 from feedgen.feed import FeedGenerator
 from readability.readability import Document
 from settings import *
+
+os.environ['TZ'] = locale
+time.tzset()
+time.tzname
 
 logger = logging.getLogger('T2R')
 logger.setLevel(logging.DEBUG)
 fh = logging.FileHandler(log_file)
 fh.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', '%Y-%m-%d %I:%M:%S %p %Z')
+# formatter.converter = time.gmtime
 fh.setFormatter(formatter)
 logger.addHandler(fh)
 
