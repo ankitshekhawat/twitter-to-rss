@@ -4,6 +4,8 @@ from feedgen.feed import FeedGenerator
 from readability.readability import Document
 from settings import *
 
+# Adjust the time zone to locale timezone. May only work in unix systems. 
+# If so, remove/comment the next three lines
 os.environ['TZ'] = locale
 time.tzset()
 time.tzname
@@ -13,7 +15,6 @@ logger.setLevel(logging.DEBUG)
 fh = logging.FileHandler(log_file)
 fh.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', '%Y-%m-%d %I:%M:%S %p %Z')
-# formatter.converter = time.gmtime
 fh.setFormatter(formatter)
 logger.addHandler(fh)
 
