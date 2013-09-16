@@ -1,5 +1,5 @@
 # twitter2rss.py
-==============
+----------------
 **Simple python script to parse twitter feed to generate a rss feed.**
 
  This simple script gets tweets from your timeline and publishes them as an rss feed.
