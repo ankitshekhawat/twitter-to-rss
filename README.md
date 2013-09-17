@@ -5,6 +5,9 @@
  This simple script gets tweets from your timeline and publishes them as an rss feed.
  Attempts to fetch the content of the page using the readability algorithm 
  so that you can read the your twitter feeds anywhere Flipboard style
+ 
+ There is a choice of either using Readability.com's parser api or using python's readability-lxml.
+ readability.com's api generates better and leaner results, but then adds dependency to an additional webservice.
 
 ## Requires: 
 * **tweepy**            | $ pip install tweepy            | https://github.com/tweepy/tweepy
@@ -20,9 +23,7 @@
 python tweet2rss.py
 I use it with an hourly cronjob script
 
- Before running, edit settings.py for twitter account details 
+ Before running, edit settings.py for twitter and readability account details 
  and the rss feed meta data details
  
  
-## Todo
-* Create an option for using readability api instead of readability-lxml.

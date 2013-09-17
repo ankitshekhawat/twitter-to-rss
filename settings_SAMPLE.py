@@ -1,4 +1,4 @@
-
+# -*- coding: utf-8 -*-
 # ADD your twitter Credentials and rename this file to settings.py
 
 feed_item_limit = 1500 # The rss feed tends to get really big so this prunes it
@@ -21,3 +21,9 @@ twitter_keys = {'consumer_key' : 'xxxxxxxxxxxxxxxxxxxxxx',
                 'access_token' : 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
                 'access_token_secret' : 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
                 }   
+
+
+# If you want to use readablility.com's parser api (http://www.readability.com/developers/api/parser) 
+# set using_readability_api to True, else it will use the cruder python readability-lxml library.
+using_readability_api = True
+readability_api_token = 'xxxxxxxxxxxxxxxxxxxxxx'

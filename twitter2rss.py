@@ -1,8 +1,13 @@
 #!/usr/bin/python
-import pickle, tweepy, urllib, pytz, logging, time, os
+# -*- coding: utf-8 -*-
+
+import pickle, tweepy, urllib, pytz, logging, os, time
 from feedgen.feed import FeedGenerator
-from readability.readability import Document
 from settings import *
+from readability.readability import Document
+if using_readability_api :
+    import json 
+
 
 # Adjust the time zone to locale timezone. May only work in unix systems. 
 # If so, remove/comment the next three lines
@@ -10,13 +15,15 @@ os.environ['TZ'] = locale
 time.tzset()
 time.tzname
 
+#Setting up the logger
 logger = logging.getLogger('T2R')
 logger.setLevel(logging.DEBUG)
 fh = logging.FileHandler(log_file)
 fh.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', '%Y-%m-%d %I:%M:%S %p %Z')
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(lineno)d - %(message)s', '%Y-%m-%d %I:%M:%S %p %Z')
 fh.setFormatter(formatter)
 logger.addHandler(fh)
+
 
 def load_buffer(fileName):
     try:
@@ -62,7 +69,7 @@ def parse_twitter(buffered, keys):
         logger.debug("Will fetch tweets since tweet ID " + str(lastID))
         for i in tweepy.Cursor(api.home_timeline, since_id=str(lastID)).items(): 
             parse_tweet(i)
-                # old code:  pub = api.home_timeline(count=200, since_id=str(lastID) ) #fetch feeds from the last ID
+            # without cursor code:  pub = api.home_timeline(count=200, since_id=str(lastID) ) #fetch feeds from the last ID
            
     return buffered
 
@@ -74,9 +81,16 @@ def parse_tweet(i):
         tweet['url'] = urls['expanded_url']
         
         try:
-            html = urllib.urlopen(tweet['url']).read()
-            tweet['readable_title'] = Document(html).title().encode('utf-8')
-            tweet['readable_article'] = Document(html).summary().encode('utf-8')
+            if using_readability_api:
+
+                api_url = 'https://www.readability.com/api/content/v1/parser?url=' + tweet['url'] + '&token=' + readability_api_token
+                readable = json.loads(urllib.urlopen(api_url).read())
+                tweet['readable_title'] = readable['title']
+                tweet['readable_article'] = readable['content']
+            else:
+                html = urllib.urlopen(tweet['url']).read()
+                tweet['readable_title'] = Document(html).title()
+                tweet['readable_article'] = Document(html).summary()
         except Exception, e:
             logger.error(e)
 
@@ -94,19 +108,11 @@ def parse_tweet(i):
                 logger.debug(tweet['id_str'].decode('utf-8', 'replace') + ' : @' + tweet['screen_name'].decode('utf-8', 'replace') + ' : ' + tweet['text'].decode('utf-8', 'replace'))
             except Exception, e:
                 logger.error(e)
-            
-            try: #adding tweet context on top of the parsed article
-                article_header =  '<img src="'.decode('utf-8') + tweet['profile_image_url'].decode('utf-8') + '" alt="'.decode('utf-8') + tweet['screen_name'].decode('utf-8') + '" /><p><strong>'.decode('utf-8') + tweet['user_name'].decode('utf-8') + ': </strong>'.decode('utf-8') + tweet['text'].decode('utf-8') +'</p>'.decode('utf-8')
-            except Exception, e:
-                logger.error(e)
-            else:
-                tweet['readable_article'] = article_header.encode('utf-8') + tweet['readable_article']
 
             buffered.insert(0, tweet)
             del buffered[feed_item_limit:] #pruning the feed to a maximum number of feeds.
             pickle.dump( buffered, open( buffer_file, "wb" ) )
             
-
 def generateFeeds(buffered, meta):
     utc = pytz.utc
     fg = FeedGenerator()
@@ -123,10 +129,11 @@ def generateFeeds(buffered, meta):
         fe.published(utc.localize(tweet['created_at']).astimezone(pytz.timezone(locale)))
         fe.link = tweet['url'].decode('utf-8')
         fe.guid(tweet['url'].decode('utf-8'))
-        fe.title(tweet['readable_title'].decode('utf-8'))
-        fe.description(tweet['readable_article'].decode('utf-8'))
+        fe.title(tweet['readable_title'])
+        fe.description(tweet['readable_article'])
+                
         try:
-            fe.author({'name': tweet['user_name'].decode('utf-8'), 'email':tweet['user_url'].decode('utf-8')})
+            fe.author({'name': tweet['user_name'].decode('utf-8'), 'email':tweet['text'].decode('utf-8')})
         except Exception, e:
             logger.error(e)
             fe.author({'name': 'a', 'email':'a@a.com'})
