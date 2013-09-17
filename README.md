@@ -19,11 +19,14 @@
  Created by: Ankit Shekhawat
  Website: http://www.ankit.ws
 
-## USAGE: 
+## Usage: 
 python tweet2rss.py
 I use it with an hourly cronjob script
 
- Before running, edit settings.py for twitter and readability account details 
- and the rss feed meta data details
+Before running, edit settings.py for twitter and readability account details 
+and the rss feed meta data details
  
- 
+## Todo:
+* Add an option to fetch tweets from a user list.
+* Twitter sends tweets in reverse order. Need to reverse it by either seperating the fetching with parsing. or somehow from the twitter api itself.
+* Base the pruning to something more intelligent than just feed limits, maybe from number of retweets.
