@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import pickle, tweepy, urllib, pytz, logging, os, time
+from datetime import datetime, timedelta
 from feedgen.feed import FeedGenerator
 from settings import *
 from readability.readability import Document
@@ -103,16 +104,38 @@ def parse_tweet(i):
             tweet['id'] = i.id
             tweet['id_str'] = i.id_str
             tweet['created_at'] = i.created_at
-            
+            tweet['retweets'] = i.retweet_count
+
             try:
-                logger.debug(tweet['id_str'].decode('utf-8', 'replace') + ' : @' + tweet['screen_name'].decode('utf-8', 'replace') + ' : ' + tweet['text'].decode('utf-8', 'replace'))
+                article_header =  '<div><img src="'.decode('utf-8') + tweet['profile_image_url'].decode('utf-8') + '" alt="'.decode('utf-8') + tweet['screen_name'].decode('utf-8') + '" /><p><strong>'.decode('utf-8') + tweet['user_name'].decode('utf-8') + ': </strong>'.decode('utf-8') + tweet['text'].decode('utf-8') +'</p></div><hr />'.decode('utf-8')
+            except Exception, e:
+                logger.error(e)
+            else:
+                tweet['readable_article'] = article_header + tweet['readable_article']
+                    
+            try:
+                logger.info(tweet['id_str'].decode('utf-8', 'replace') + ' : @' + tweet['screen_name'].decode('utf-8', 'replace') + ' : ' + tweet['text'].decode('utf-8', 'replace'))
             except Exception, e:
                 logger.error(e)
 
             buffered.insert(0, tweet)
-            del buffered[feed_item_limit:] #pruning the feed to a maximum number of feeds.
-            pickle.dump( buffered, open( buffer_file, "wb" ) )
-            
+            # del buffered[feed_item_limit:] #pruning the feed to a maximum number of feeds.
+            pickle.dump( buffered, open( buffer_file, "wb" ) ) # Temporary dump will prune and dup later
+
+
+def prune(buffered, item_limit, old):
+    for i in reversed(buffered): # Need to reverse the list as python does not 
+        delta = datetime.now(pytz.utc) - pytz.utc.localize(i['created_at'])
+        if delta > timedelta(days=old): 
+            logger.info('Purging an old tweet - ' + i['screen_name'] + " " + i['text'].decode('utf-8'))
+            buffered.remove(i)
+    sorted_buffer = sorted(buffered, key=lambda k: (k['retweets'], k['id']))
+    sorted_buffer.reverse()
+    del sorted_buffer[item_limit:] #pruning the feed to a maximum number of feeds.
+    pickle.dump( buffered, open( buffer_file, "wb" ) )
+    return sorted_buffer
+
+
 def generateFeeds(buffered, meta):
     utc = pytz.utc
     fg = FeedGenerator()
@@ -127,13 +150,14 @@ def generateFeeds(buffered, meta):
         fe = fg.add_entry()
         fe.id(tweet['url'].decode('utf-8'))
         fe.published(utc.localize(tweet['created_at']).astimezone(pytz.timezone(locale)))
-        fe.link = tweet['url'].decode('utf-8')
-        fe.guid(tweet['url'].decode('utf-8'))
+        
+        #fe.guid(tweet['url'].decode('utf-8'))
+        fe.link(href=tweet['url'].decode('utf-8'), rel='alternate')
         fe.title(tweet['readable_title'])
         fe.description(tweet['readable_article'])
                 
         try:
-            fe.author({'name': tweet['user_name'].decode('utf-8'), 'email':tweet['text'].decode('utf-8')})
+            fe.author({'name': '', 'email':tweet['user_name'].decode('utf-8') + ": " + tweet['text'].decode('utf-8')})
         except Exception, e:
             logger.error(e)
             fe.author({'name': 'a', 'email':'a@a.com'})
@@ -152,6 +176,7 @@ def write_rss(feedGenerator, fileName):
 logger.info('Session Started')
 buffered = load_buffer(buffer_file)
 parsed = parse_twitter(buffered, twitter_keys)
+parsed = prune(parsed, feed_item_limit, old)
 feed = generateFeeds(parsed, meta)
 write_rss(feed, rss_file)
 logger.info('Session Finished\n\n')
